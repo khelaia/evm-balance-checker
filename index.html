@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Balance Checker</title>
+    <link rel="stylesheet" href="assets/css/hack.css">
+    <style>
+        .red{
+            color: red;
+        }
+        .green{
+            color: lightgreen;
+        }
+        .flex{
+            display: flex;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h2>What is this?</h2>
+    <p>This is EVM balance checker by increasing private key from 0 to last possible value</p>
+    <hr>
+    <h3>Why did I create this?</h3>
+    <p>Just for fun! There are more private keys than atoms in the universe.
+        if you will find amount you are the most lucky dude in the universe.
+    </p>
+    <h3>Donation</h3>
+    <p>I spend 1 hour of my life to build this app. donations are welcome: 0xF507d28a3Db1142090555697ad19683315425a26</p>
+    <table>
+        <thead>
+        <tr>
+            <th>Private Key</th>
+            <th>Address</th>
+            <th>Balance</th>
+        </tr>
+        </thead>
+        <tbody id="render">
+
+        </tbody>
+    </table>
+    <p>
+        Enter page number from 1 to 904625697166532776746648320380374280100293470930272690489102837043110636675
+    </p>
+    <div class="flex">
+        <input style="width: 100%" id="page" type="number" value="1" class="form-control" min="1"  max="904625697166532776746648320380374280100293470930272690489102837043110636675"/>
+        <button style="width: 320px;" id="generate" class="btn btn-primary btn-ghost">Generate</button>
+    </div>
+</div>
+
+<script>
+    function copyToClipboard(text) {
+        navigator.clipboard.writeText(text)
+            .then(() => {
+                console.log('Text copied to clipboard: ', text);
+            })
+            .catch((error) => {
+                console.error('Failed to copy text to clipboard: ', error);
+            });
+    }
+</script>
+<script type="module">
+    import { ethers } from "https://cdnjs.cloudflare.com/ajax/libs/ethers/6.6.2/ethers.min.js";
+
+    const checker = async (page, perPage = BigInt(128)) => {
+
+        let start = BigInt(((BigInt(page) - BigInt(1)) * perPage)+BigInt(1));
+        let end = BigInt(start + BigInt(perPage))
+        const rpcs = [
+            {url:'https://rpc.ankr.com/eth', name:"ETH"},
+            {url:'https://rpc.ankr.com/polygon', name:"Polygon"},
+            {url:'https://bscrpc.com', name:"BSC"},
+            {url:'https://rpc.ankr.com/avalanche', name:"AVAX"},
+            {url:'https://evmos-json-rpc.stakely.io', name:"EVMOS"},
+            {url:'https://rpc.ankr.com/fantom', name:"FANTOM"},
+            {url:'https://arbitrum.blockpi.network/v1/rpc/public', name:"ARBITRUM"},
+            {url:'https://rpc.ankr.com/optimism', name:"OPTIMISM"},
+            {url:'https://api.harmony.one', name:"HARMONY"}
+        ];
+
+        for (let i=start; i<end; i++){
+            document.querySelector('#generate').innerHTML = `Generating ${end-i} more address <span class="loading"></span>`
+            console.log(i, i.toString(16))
+            let privateKeyHex =  i.toString(16).padStart(64, '0');
+            const wallet = new ethers.Wallet(privateKeyHex);
+            const address = wallet.address;
+
+            let tds = ''
+            for (const rpc of rpcs) {
+                const provider = new ethers.JsonRpcProvider(rpc.url);
+                await provider.getBalance(address).then((response)=>{
+                    let balance = ethers.formatEther(response);
+                    tds+=`<li class="${ parseFloat(balance) === 0 ? 'red':'green'}">${balance} <span>${rpc.name}</span></li>`
+                })
+            }
+            document.querySelector('#render').innerHTML += `
+                        <td><button class="btn btn-info" onClick="copyToClipboard('${privateKeyHex}')">Copy PK</button></td>
+                        <td>${address}</td>
+                        <td><ul>${tds}</ul></td>`
+            document.documentElement.scrollTop = document.documentElement.scrollHeight;
+
+        }
+        document.querySelector('#generate').innerHTML = 'Generate'
+    }
+
+    document.querySelector('#generate').addEventListener('click',function () {
+        let page = document.querySelector("#page").value;
+        checker(page)
+    })
+
+</script>
+</body>
+</html>
